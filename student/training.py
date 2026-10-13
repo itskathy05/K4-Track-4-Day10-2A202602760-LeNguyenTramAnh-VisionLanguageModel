@@ -179,12 +179,26 @@ def train_sft(exp, *, data_root="data", checkpoint_root="/content/drive/MyDrive/
         micro += 1
         if micro < grad_accum:
             continue
+        # Transformers/Accelerate can recast Qwen's non-quantized vision
+        # merger leaves to the activation dtype during the forward pass.
+        # GradScaler refuses FP16 gradients, so promote the optimizer leaves
+        # and accumulated gradients back to FP32 at the optimizer boundary.
+        # This also gives AdamW FP32 master values/state for these parameters.
+        promoted = 0
+        for parameter in params:
+            if parameter.grad is not None and parameter.grad.dtype == torch.float16:
+                parameter.data = parameter.data.float()
+                parameter.grad = parameter.grad.float()
+                promoted += 1
+        if promoted and not run.get("fp16_gradients_promoted"):
+            run["fp16_gradients_promoted"] = promoted
+            print(f"promoted {promoted} FP16 trainable gradients to FP32 before GradScaler")
         half_gradients = [(name, str(p.dtype), str(p.grad.dtype), tuple(p.shape))
                           for name, p in model.named_parameters()
                           if p.requires_grad and p.grad is not None
                           and p.grad.dtype == torch.float16]
         if half_gradients:
-            raise RuntimeError(f"FP16 trainable gradients before GradScaler unscale: {half_gradients[:8]}")
+            raise RuntimeError(f"FP16 trainable gradients remain before GradScaler: {half_gradients[:8]}")
         scaler.unscale_(optimizer)
         torch.nn.utils.clip_grad_norm_(params, 1.0)
         scaler.step(optimizer)
