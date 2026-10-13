@@ -1,6 +1,6 @@
 import pytest
 
-from student.coords import yolo_to_box
+from student.coords import objects_to_answer, yolo_to_box
 
 
 def test_tiny_in_bounds_box_survives_rounding():
@@ -19,3 +19,12 @@ def test_tiny_in_bounds_box_survives_rounding():
 def test_non_intersecting_or_zero_area_box_is_rejected(coords):
     with pytest.raises(ValueError):
         yolo_to_box("crack", coords)
+
+
+def test_answer_skips_only_fully_out_of_frame_annotations():
+    answer = objects_to_answer([
+        {"label": "pothole", "yolo": [0.5, 0.5, 0.2, 0.2]},
+        {"label": "crack", "yolo": [1.2, 0.5, 0.1, 0.1]},
+    ])
+    assert '"label":"pothole"' in answer
+    assert '"label":"crack"' not in answer

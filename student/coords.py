@@ -44,8 +44,17 @@ def yolo_to_box(label: str, yolo: list[float] | tuple[float, ...], *, scale: str
 
 def objects_to_answer(objects: list[dict[str, Any]], *, scale: str = "norm1000",
                       width: int = 640, height: int = 360) -> str:
-    boxes = [yolo_to_box(o["label"], o["yolo"], scale=scale, width=width, height=height)
-             for o in objects]
+    boxes = []
+    for obj in objects:
+        try:
+            boxes.append(yolo_to_box(obj["label"], obj["yolo"], scale=scale,
+                                     width=width, height=height))
+        except ValueError as exc:
+            # The source set contains annotations entirely outside the image.
+            # Exclude those from the target; malformed labels and zero-area
+            # boxes remain errors so data problems are not silently hidden.
+            if "no positive-area intersection" not in str(exc):
+                raise
     boxes.sort(key=lambda b: (b["bbox_2d"][1], b["bbox_2d"][0]))
     return json.dumps(boxes, separators=(",", ":"), ensure_ascii=False)
 
