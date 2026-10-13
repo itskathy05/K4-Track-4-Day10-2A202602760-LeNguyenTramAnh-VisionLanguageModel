@@ -18,12 +18,27 @@ def yolo_to_box(label: str, yolo: list[float] | tuple[float, ...], *, scale: str
         raise ValueError("YOLO box must contain four finite values")
     xc, yc, w, h = map(float, yolo)
     sx, sy = (1000.0, 1000.0) if scale == "norm1000" else (float(width), float(height))
-    x1, y1 = round((xc - w / 2) * sx), round((yc - h / 2) * sy)
-    x2, y2 = round((xc + w / 2) * sx), round((yc + h / 2) * sy)
+    x1f, y1f = (xc - w / 2) * sx, (yc - h / 2) * sy
+    x2f, y2f = (xc + w / 2) * sx, (yc + h / 2) * sy
+    # Reject malformed boxes that have no area or do not intersect the image.
+    # Tiny but valid boxes can otherwise collapse to zero width/height after
+    # integer rounding; keep one coordinate unit so the JSON box stays valid.
+    if x2f <= x1f or y2f <= y1f or x2f <= 0 or y2f <= 0 or x1f >= sx or y1f >= sy:
+        raise ValueError("YOLO box has no positive-area intersection with the image")
+    x1, y1 = round(x1f), round(y1f)
+    x2, y2 = round(x2f), round(y2f)
     x1, x2 = max(0, min(int(sx), x1)), max(0, min(int(sx), x2))
     y1, y2 = max(0, min(int(sy), y1)), max(0, min(int(sy), y2))
-    if x2 <= x1 or y2 <= y1:
-        raise ValueError(f"degenerate box after clipping: {(x1, y1, x2, y2)}")
+    if x2 <= x1:
+        if x1 < int(sx):
+            x2 = x1 + 1
+        else:
+            x1 = x2 - 1
+    if y2 <= y1:
+        if y1 < int(sy):
+            y2 = y1 + 1
+        else:
+            y1 = y2 - 1
     return {"label": label, "bbox_2d": [x1, y1, x2, y2]}
 
 
