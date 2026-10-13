@@ -76,6 +76,12 @@ def train_sft(exp, *, data_root="data", checkpoint_root="/content/drive/MyDrive/
     model, setup_info = apply_setup(model, setup_exp, rank=rank)
     model.train()
     device = torch.device("cuda:0")
+    # Keep every optimizer-owned leaf in FP32. Some PEFT/Qwen wrappers can
+    # materialize LoRA leaves in the base activation dtype after insertion;
+    # GradScaler refuses their FP16 gradients at unscale time.
+    for parameter in model.parameters():
+        if parameter.requires_grad and parameter.dtype == torch.float16:
+            parameter.data = parameter.data.float()
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.AdamW(params, lr=2e-4, weight_decay=0.0)
     warmup_steps = max(1, int(0.05 * max_steps))
