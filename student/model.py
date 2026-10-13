@@ -96,6 +96,12 @@ def apply_setup(model, exp: str, *, rank=16):
         if not 50_000_000 <= projector_n <= 60_000_000:
             raise RuntimeError(
                 f"unexpected full projector size for Qwen3-VL-4B: {projector_n:,} parameters")
+    # GradScaler rejects FP16 parameter gradients during unscale_. Keep small
+    # trainable LoRA weights in FP32 (base weights remain NF4/FP16); this also
+    # gives the full E2/E3 projector a consistent FP32 optimizer state.
+    for parameter in peft_model.parameters():
+        if parameter.requires_grad and parameter.dtype == torch.float16:
+            parameter.data = parameter.data.float()
     return peft_model, {"matched_modules": len(names), "trainable_params": sum(
         p.numel() for p in peft_model.parameters() if p.requires_grad),
         "architecture_params": architecture_params}
