@@ -27,6 +27,29 @@ def load_jsonl(path: str | Path) -> list[dict[str, Any]]:
     return rows
 
 
+def preflight_entries(entries, image_root="data"):
+    """Fail fast on bad labels or unreadable/mismatched images before model load."""
+    image_root = Path(image_root)
+    for index, entry in enumerate(entries):
+        image_id = entry.get("image_id", f"row-{index}")
+        try:
+            width, height = int(entry["width"]), int(entry["height"])
+            if width <= 0 or height <= 0:
+                raise ValueError(f"invalid image dimensions {(width, height)}")
+            # Exercise the exact label conversion used by training. Fully
+            # out-of-frame annotations are intentionally excluded there.
+            objects_to_answer(entry["objects"], width=width, height=height)
+            image_path = image_root / entry["image_path"]
+            with Image.open(image_path) as image:
+                if image.size != (width, height):
+                    raise ValueError(
+                        f"image size {image.size} disagrees with split metadata {(width, height)}"
+                    )
+                image.verify()
+        except Exception as exc:
+            raise ValueError(f"preflight failed for image {image_id}: {exc}") from exc
+
+
 def make_messages(image: Image.Image, prompt: str = PROMPT) -> list[dict[str, Any]]:
     return [{"role": "user", "content": [
         {"type": "image", "image": image}, {"type": "text", "text": prompt}

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import torch
 
-from student.data import RoadDamageDataset, load_jsonl, multimodal_collate
+from student.data import RoadDamageDataset, load_jsonl, multimodal_collate, preflight_entries
 from student.model import apply_setup, load_base_model, save_projector, set_seed
 
 
@@ -61,6 +61,10 @@ def train_sft(exp, *, data_root="data", checkpoint_root="/content/drive/MyDrive/
         n = max(1, int(len(entries) * train_fraction))
         idx = np.random.default_rng(seed).permutation(len(entries))[:n]
         entries = [entries[int(i)] for i in sorted(idx)]
+    # Validate every selected image and target before loading the multi-GB model.
+    # This turns late, expensive dataset failures into immediate actionable errors.
+    preflight_entries(entries, data_root)
+    print(f"{exp}: preflight passed for {len(entries)} training images")
     from transformers import AutoProcessor
     processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-4B-Instruct")
     processor.tokenizer.padding_side = "right"

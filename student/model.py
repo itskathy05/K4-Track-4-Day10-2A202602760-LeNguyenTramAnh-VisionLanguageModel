@@ -62,7 +62,11 @@ def apply_setup(model, exp: str, *, rank=16):
     if exp not in {"e1", "e2", "e3"}:
         raise ValueError(f"unsupported SFT experiment: {exp}")
     architecture_params = inspect_architecture(model)
-    model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
+    # Configure checkpointing explicitly. PEFT's convenience flag currently
+    # enables the Transformers default (reentrant), which emits warnings and
+    # can fail when a frozen vision block receives no grad-requiring input.
+    model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=False)
+    model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
     for p in model.parameters():
         p.requires_grad_(False)
     names = [name for name, _module in model.named_modules()
