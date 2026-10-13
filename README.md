@@ -79,6 +79,30 @@ Mọi setup dùng **QLoRA 4-bit** (NF4). Riêng ViT và `lm_head` **không lư�
    Không có tài khoản Kaggle? Tải zip dataset về tay và dùng `--zip <đường dẫn>` hoặc `--source <thư mục đã giải nén>`.
 4. `python -m pytest -q` để chắc công cụ của đề chạy đúng trên máy bạn.
 
+### Mã chạy E0–E4
+
+Phần triển khai nằm trong `student/`; giữ nguyên `scripts/`, `tests/` và `configs/` của đề. Mở notebook từ repository đã đồng bộ lên Colab để các file `student/` và `scripts/` cùng có mặt trong runtime. Notebook mount Drive và lưu checkpoint tại `MyDrive/day10`.
+
+Các lệnh có thể chạy riêng trong Colab:
+
+```bash
+python -m student.runner --exp e0 --mode infer --split val
+python -m student.runner --exp e0 --mode infer --split test
+python -m student.runner --exp e1 --mode train --checkpoint-root /content/drive/MyDrive/day10
+python -m student.runner --exp e1 --mode infer --split val --checkpoint-root /content/drive/MyDrive/day10
+```
+
+Lặp train và validation cho E2/E3. Chỉ chạy inference test sau khi kiểm tra validation; runner chặn E1 nếu parse hợp lệ dưới 0,95 hoặc F1 chưa hơn E0 ít nhất 0,10. E4 dùng setup tốt nhất theo validation:
+
+```bash
+python -m student.runner --exp e4_data_10 --mode train --train-fraction 0.1 --checkpoint-root /content/drive/MyDrive/day10
+python -m student.runner --exp e4_data_10 --mode infer --split test --checkpoint-root /content/drive/MyDrive/day10
+python -m student.runner --exp e4_data_100 --mode infer --split test --checkpoint-root /content/drive/MyDrive/day10 --base-exp auto
+python -m student.reporting --make-figures --make-summary --compare-e4
+```
+
+`student_tests/` chứa kiểm tra phần mã tự viết. Bảng kết quả, câu trả lời trong `REPORT.md` và evidence cần được hoàn thiện từ các lần chạy thật; không điền số liệu ước đoán.
+
 ## 6. Yêu cầu và cách nộp
 
 - Colab **T4 16 GB**. Mỗi lần huấn luyện ước tính **20–30 phút** (300 bước; con số ước lượng, hãy ghi thời gian thật của bạn vào báo cáo). Nếu thấy hết VRAM hoặc quá chậm, xem bảng "Khi gặp sự cố" trong GUIDE.
