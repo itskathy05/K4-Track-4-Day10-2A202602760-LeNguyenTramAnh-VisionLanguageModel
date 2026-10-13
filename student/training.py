@@ -179,6 +179,12 @@ def train_sft(exp, *, data_root="data", checkpoint_root="/content/drive/MyDrive/
         micro += 1
         if micro < grad_accum:
             continue
+        half_gradients = [(name, str(p.dtype), str(p.grad.dtype), tuple(p.shape))
+                          for name, p in model.named_parameters()
+                          if p.requires_grad and p.grad is not None
+                          and p.grad.dtype == torch.float16]
+        if half_gradients:
+            raise RuntimeError(f"FP16 trainable gradients before GradScaler unscale: {half_gradients[:8]}")
         scaler.unscale_(optimizer)
         torch.nn.utils.clip_grad_norm_(params, 1.0)
         scaler.step(optimizer)
