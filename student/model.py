@@ -15,6 +15,7 @@ VIT_TARGETS = re.compile(
     r"^(?:model\.)?visual\.blocks\.\d+\.(?:attn\.(?:qkv|proj)|mlp\.(?:linear_fc1|linear_fc2))$"
 )
 PROJECTOR_PARTS = ("visual.merger", "visual.deepstack_merger_list")
+FULL_PRECISION_SKIP_MODULES = ["visual", "model.visual", "lm_head", "model.lm_head"]
 
 
 def set_seed(seed=42):
@@ -32,19 +33,29 @@ def load_base_model(model_id=MODEL_ID):
     quant = BitsAndBytesConfig(
         load_in_4bit=True, bnb_4bit_quant_type="nf4",
         bnb_4bit_compute_dtype=torch.float16, bnb_4bit_use_double_quant=True,
-        llm_int8_skip_modules=["visual", "lm_head"],
+        # Transformers uses these skip names for both the 8-bit and 4-bit
+        # bitsandbytes paths. Qwen3-VL versions differ in whether modules are
+        # rooted at visual.* or model.visual.*, so keep both spellings.
+        llm_int8_skip_modules=FULL_PRECISION_SKIP_MODULES,
     )
     model = Qwen3VLForConditionalGeneration.from_pretrained(
         model_id, quantization_config=quant, dtype=torch.float16,
         device_map={"": 0}, attn_implementation="sdpa",
     )
+    validate_quantization_layout(model)
     return model
 
 
 def inspect_architecture(model):
+    """Count logical parameters, including unpacked shapes of NF4 linears."""
+    modules = dict(model.named_modules())
     totals = {"llm": 0, "vit": 0, "projector": 0, "total": 0}
     for name, p in model.named_parameters():
-        n = p.numel()
+        module = modules.get(name.rsplit(".", 1)[0])
+        if name.endswith(".weight") and module is not None and +                module.__class__.__name__ == "Linear4bit":
+            n = int(module.in_features) * int(module.out_features)
+        else:
+            n = p.numel()
         totals["total"] += n
         if any(part in name for part in PROJECTOR_PARTS):
             totals["projector"] += n
@@ -52,6 +63,36 @@ def inspect_architecture(model):
             totals["vit"] += n
         else:
             totals["llm"] += n
+    return totals
+
+
+def validate_quantization_layout(model):
+    """Fail before training if any vision/projector linear was quantized."""
+    bad_visual = []
+    bad_head = []
+    for name, module in model.named_modules():
+        if module.__class__.__name__ != "Linear4bit":
+            continue
+        if name.startswith(("visual.", "model.visual.")):
+            bad_visual.append(name)
+        if name in {"lm_head", "model.lm_head"}:
+            bad_head.append(name)
+    if bad_visual:
+        raise RuntimeError(
+            "vision tower was quantized despite the skip list: "
+            + ", ".join(bad_visual[:5]))
+    if bad_head:
+        raise RuntimeError("lm_head was quantized: " + ", ".join(bad_head))
+
+    totals = inspect_architecture(model)
+    if not 4_300_000_000 <= totals["total"] <= 4_600_000_000:
+        raise RuntimeError(f"unexpected logical total parameter count: {totals}")
+    if not 400_000_000 <= totals["vit"] + totals["projector"] <= 430_000_000:
+        raise RuntimeError(f"unexpected vision parameter count: {totals}")
+    if not 100_000_000 <= totals["projector"] <= 115_000_000:
+        raise RuntimeError(f"projector is not full precision/unpacked: {totals}")
+    if not 3_900_000_000 <= totals["llm"] <= 4_100_000_000:
+        raise RuntimeError(f"unexpected language-model parameter count: {totals}")
     return totals
 
 
@@ -88,12 +129,7 @@ def apply_setup(model, exp: str, *, rank=16):
                 projector_n += p.numel()
         if projector_n == 0:
             raise RuntimeError("projector parameters were not found")
-        # Qwen3-VL-4B-Instruct with Transformers 5.19 exposes 54.58M
-        # parameters across visual.merger + visual.deepstack_merger_list.
-        # The lab guide's ~109M estimate is about 2x this runtime's measured
-        # module inventory; keep the check tied to the modules we actually
-        # unfreeze rather than rejecting the correct full projector.
-        if not 50_000_000 <= projector_n <= 60_000_000:
+        if not 100_000_000 <= projector_n <= 115_000_000:
             raise RuntimeError(
                 f"unexpected full projector size for Qwen3-VL-4B: {projector_n:,} parameters")
     # GradScaler rejects FP16 parameter gradients during unscale_. Keep small

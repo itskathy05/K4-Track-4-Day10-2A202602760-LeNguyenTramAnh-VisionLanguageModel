@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 import statistics
 import time
+import platform
+import importlib.metadata
 from pathlib import Path
 
 from scripts.score import iou_xyxy, parse_output
@@ -185,6 +187,7 @@ def train_grpo(*, base_exp: str, data_root="data", checkpoint_root="/kaggle/work
         max_steps=max_steps, per_device_train_batch_size=1,
         gradient_accumulation_steps=4, generation_batch_size=4,
         num_generations=4, max_completion_length=128,
+        temperature=0.7, top_p=0.8, top_k=20,
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
         fp16=True, bf16=False, use_vllm=False, use_cache=False,
@@ -218,11 +221,21 @@ def train_grpo(*, base_exp: str, data_root="data", checkpoint_root="/kaggle/work
            "max_steps": max_steps, "seed": seed, "train_images": len(dataset),
            "learning_rate": 5e-6, "beta": 0.0, "num_generations": 4,
            "max_completion_length": 128, "generation_batch_size": 4,
+           "temperature": 0.7, "top_p": 0.8, "top_k": 20,
            "per_device_train_batch_size": 1, "gradient_accumulation_steps": 4,
            "trainable_params": sum(p.numel() for p in trainer.model.parameters() if p.requires_grad),
            "train_minutes": elapsed / 60,
            "peak_vram_gb": torch.cuda.max_memory_allocated() / (1024 ** 3),
            "gpu": torch.cuda.get_device_name(0), "log_history": metrics,
+           "environment": {
+               "python": platform.python_version(),
+               "cuda_runtime": torch.version.cuda,
+               "packages": {
+                   name: importlib.metadata.version(name)
+                   for name in ("transformers", "peft", "trl", "bitsandbytes",
+                                "accelerate", "torch")
+               },
+           },
            "reward_mean_last": reward_values[-1] if reward_values else None,
            "reward_mean_history": reward_values,
            "reward_std_last": reward_std_values[-1] if reward_std_values else None,

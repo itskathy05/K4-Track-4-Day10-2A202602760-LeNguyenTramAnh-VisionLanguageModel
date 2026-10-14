@@ -58,8 +58,9 @@ def predictions_map(path):
 
 
 def make_qualitative_examples(*, data_root="data", pred_files: dict[str, str], out_dir="report/figures",
-                              limit=6):
+                              limit=8):
     entries = read_jsonl(Path(data_root) / "splits" / "test.jsonl")
+    target_limit = min(limit, len(entries))
     maps = {name: predictions_map(path) for name, path in pred_files.items()}
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -82,25 +83,27 @@ def make_qualitative_examples(*, data_root="data", pred_files: dict[str, str], o
                     (b["bbox"][2]-b["bbox"][0])*(b["bbox"][3]-b["bbox"][1]) for b in gt) < 5000:
                 kind = "small-box TP"
             candidates.append((entry, name, kind, pred, gt))
-    priorities = ("FN", "FP", "wrong-class", "small-box TP", "TP")
+    quotas = {"FN": 2, "FP": 2, "wrong-class": 1, "small-box TP": 1, "TP": 2}
     chosen = []
     used = set()
-    for kind in priorities:
-        item = next((x for x in candidates if x[2] == kind and x[0]["image_id"] not in used), None)
-        if item:
-            chosen.append(item)
-            used.add(item[0]["image_id"])
+    for kind, quota in quotas.items():
+        for item in candidates:
+            if sum(x[2] == kind for x in chosen) >= quota:
+                break
+            if item[2] == kind and item[0]["image_id"] not in used:
+                chosen.append(item)
+                used.add(item[0]["image_id"])
     for item in candidates:
-        if len(chosen) >= limit:
+        if len(chosen) >= target_limit:
             break
         if item[0]["image_id"] not in used:
             chosen.append(item)
             used.add(item[0]["image_id"])
-    if len(chosen) < limit:
+    if len(chosen) < target_limit:
         raise RuntimeError(f"could only select {len(chosen)} unique qualitative examples")
     colors = {"GT": (40, 220, 80), "Pred": (255, 70, 70)}
     saved = []
-    for i, (entry, model_name, kind, pred, gt) in enumerate(chosen[:limit], 1):
+    for i, (entry, model_name, kind, pred, gt) in enumerate(chosen[:target_limit], 1):
         with Image.open(Path(data_root) / entry["image_path"]) as im:
             im = im.convert("RGB")
         draw = ImageDraw.Draw(im)
@@ -111,9 +114,9 @@ def make_qualitative_examples(*, data_root="data", pred_files: dict[str, str], o
                 overlaps = [iou_xyxy(box["bbox"], other["bbox"])
                             for other in comparable if other["label"] == box["label"]]
                 best_iou = max(overlaps, default=0.0)
-                if label == "GT":
-                    x1, x2 = x1 * im.width / 1000, x2 * im.width / 1000
-                    y1, y2 = y1 * im.height / 1000, y2 * im.height / 1000
+                # Both scorer GT and normalized model predictions use 0–1000.
+                x1, x2 = x1 * im.width / 1000, x2 * im.width / 1000
+                y1, y2 = y1 * im.height / 1000, y2 * im.height / 1000
                 draw.rectangle((x1, y1, x2, y2), outline=colors[label], width=2)
                 draw.text((x1, max(0, y1 - 12)),
                           f"{label}:{box['label']} IoU={best_iou:.2f}", fill=colors[label])

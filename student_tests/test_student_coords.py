@@ -12,9 +12,9 @@ def test_tiny_in_bounds_box_survives_rounding():
 
 
 @pytest.mark.parametrize("coords", [
-    [1.2, 0.5, 0.1, 0.1],  # entirely to the right
-    [0.5, -0.2, 0.1, 0.1],  # entirely above
-    [0.5, 0.5, 0.0, 0.1],  # zero width
+    [1.2, 0.5, 0.1, 0.1],
+    [0.5, -0.2, 0.1, 0.1],
+    [0.5, 0.5, 0.0, 0.1],
 ])
 def test_non_intersecting_or_zero_area_box_is_rejected(coords):
     with pytest.raises(ValueError):
@@ -26,5 +26,5 @@ def test_answer_skips_only_fully_out_of_frame_annotations():
         {"label": "pothole", "yolo": [0.5, 0.5, 0.2, 0.2]},
         {"label": "crack", "yolo": [1.2, 0.5, 0.1, 0.1]},
     ])
-    assert '"label":"pothole"' in answer
-    assert '"label":"crack"' not in answer
+    assert '\"label\":\"pothole\"' in answer
+    assert '\"label\":\"crack\"' not in answer

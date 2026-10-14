@@ -6,12 +6,29 @@ import math
 import random
 import time
 import gc
+import platform
+import importlib.metadata
 from pathlib import Path
 
 import torch
 
 from student.data import RoadDamageDataset, load_jsonl, multimodal_collate, preflight_entries
 from student.model import apply_setup, load_base_model, save_projector, set_seed
+
+
+def _environment_metadata():
+    packages = {}
+    for name in ("transformers", "peft", "trl", "bitsandbytes", "accelerate", "torch"):
+        try:
+            packages[name] = importlib.metadata.version(name)
+        except importlib.metadata.PackageNotFoundError:
+            packages[name] = None
+    return {
+        "python": platform.python_version(),
+        "packages": packages,
+        "cuda_runtime": torch.version.cuda,
+        "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
+    }
 
 
 def _save_checkpoint(model, optimizer, scheduler, scaler, step, checkpoint_root, exp, run, progress):
@@ -99,7 +116,8 @@ def train_sft(exp, *, data_root="data", checkpoint_root="/content/drive/MyDrive/
            "architecture_params": setup_info["architecture_params"],
            "batch_size": batch_size, "grad_accum": grad_accum, "max_steps": max_steps,
            "lr": 2e-4, "train_projector": setup_exp in {"e2", "e3"},
-           "gpu": torch.cuda.get_device_name(0), "loss_history": []}
+           "gpu": torch.cuda.get_device_name(0), "environment": _environment_metadata(),
+           "loss_history": []}
     for row in entries:
         for obj in row["objects"]:
             run["train_boxes"][obj["label"]] = run["train_boxes"].get(obj["label"], 0) + 1

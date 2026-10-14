@@ -25,12 +25,10 @@ def _select_best_validation(base_exp):
                                  "minutes": float(run.get("train_minutes", 1e9))}
     if not scores:
         raise FileNotFoundError("run E1/E2/E3 validation first, or pass --base-exp explicitly")
-    best = max(scores, key=lambda name: scores[name]["f1"])
-    best_ci = scores[best]["ci"]
-    overlapping = [name for name, item in scores.items()
-                   if item["ci"][0] <= best_ci[1] and best_ci[0] <= item["ci"][1]]
-    selected = min(overlapping, key=lambda name: (
-        scores[name]["vram"], scores[name]["minutes"], -scores[name]["f1"]))
+    best_f1 = max(item["f1"] for item in scores.values())
+    tied = [name for name, item in scores.items() if item["f1"] == best_f1]
+    selected = min(tied, key=lambda name: (
+        scores[name]["vram"], scores[name]["minutes"], name))
     print(f"Best validation setup selected: {selected}")
     return selected
 
@@ -77,6 +75,14 @@ def main(argv=None):
     base_exp = _select_best_validation(args.base_exp) if exp == "e4_data_100" else args.base_exp
     checkpoint_exp = "e4_data_10" if exp == "e4_data_10" else (
         base_exp if exp == "e4_data_100" else exp)
+    if exp == "e1" and args.split == "test":
+        e0_path, e1_path = Path("work/e0_val_score.json"), Path("work/e1_val_score.json")
+        if not e0_path.exists() or not e1_path.exists():
+            raise FileNotFoundError("E0/E1 validation scores are required before E1 test")
+        e0_val = json.loads(e0_path.read_text(encoding="utf-8"))
+        e1_val = json.loads(e1_path.read_text(encoding="utf-8"))
+        if e1_val["parse_valid_rate"] < 0.95 or +                e1_val["micro"]["f1"] < e0_val["micro"]["f1"] + 0.10:
+            raise RuntimeError("E1 validation quality gate failed; test inference is blocked")
     pred = Path("work") / f"{exp}_{args.split}.jsonl"
     generate_split(checkpoint_exp, split=args.split, data_root=args.data_root,
                    checkpoint_root=args.checkpoint_root, output=pred)
