@@ -108,6 +108,7 @@ def _latest_sft_checkpoint(exp: str, checkpoint_root: str | Path) -> Path:
 
 
 def _load_grpo_model(base_exp: str, checkpoint: Path):
+    import torch
     from peft import PeftModel
     from student.model import load_base_model, load_projector
 
@@ -119,8 +120,20 @@ def _load_grpo_model(base_exp: str, checkpoint: Path):
     for name, param in model.named_parameters():
         train_language_lora = "lora_" in name and "language_model.layers." in name
         param.requires_grad_(train_language_lora)
+        # Qwen/PEFT may restore LoRA leaves as bf16 even when GRPO runs with
+        # fp16 AMP. GradScaler cannot unscale bf16 gradients on the T4 CUDA
+        # path, so keep the small trainable adapter leaves in float32. Frozen
+        # base weights retain their quantized/fp16/bf16 storage.
+        if train_language_lora and param.dtype != torch.float32:
+            param.data = param.data.float()
     if not any(p.requires_grad for p in model.parameters()):
         raise RuntimeError("E5 loaded no trainable language-model LoRA weights")
+    bad_trainable = [
+        (name, str(param.dtype)) for name, param in model.named_parameters()
+        if param.requires_grad and param.dtype != torch.float32
+    ]
+    if bad_trainable:
+        raise RuntimeError(f"E5 non-float32 trainable parameters: {bad_trainable[:8]}")
     model.config.use_cache = False
     model.enable_input_require_grads()
     model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
