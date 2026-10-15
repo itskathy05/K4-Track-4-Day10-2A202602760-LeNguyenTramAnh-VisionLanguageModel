@@ -199,7 +199,10 @@ def train_grpo(*, base_exp: str, data_root="data", checkpoint_root="/kaggle/work
         output_dir=str(trainer_dir), learning_rate=5e-6, beta=0.0,
         max_steps=max_steps, per_device_train_batch_size=1,
         gradient_accumulation_steps=4, generation_batch_size=4,
-        num_generations=4, max_completion_length=128,
+        # Keep the two gate runs short enough to expose integration failures
+        # without spending the full generation budget.  The official 60-step
+        # run retains the rubric's 128-token completion limit.
+        num_generations=4, max_completion_length=32 if smoke else 128,
         temperature=0.7, top_p=0.8, top_k=20,
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
