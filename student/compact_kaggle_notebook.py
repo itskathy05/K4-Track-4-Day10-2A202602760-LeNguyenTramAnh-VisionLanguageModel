@@ -53,7 +53,7 @@ with zipfile.ZipFile(io.BytesIO(base64.b64decode(PATCH_B64))) as archive:
 (REPO / "tests" / "test_coords.py").unlink(missing_ok=True)
 os.chdir(REPO)
 sys.path.insert(0, str(REPO))
-subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-r", "requirements.txt"], check=True)
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-r", "requirements-colab.txt"], check=True)
 print("Repository ready:", REPO)
 '''
     notebook["cells"][2]["source"] = setup.splitlines(keepends=True)

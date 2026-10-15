@@ -11,4 +11,5 @@ __pycache__/
 adapter*/
 .ipynb_checkpoints/
 .pytest_cache/
+deliverables/
 .DS_Store

@@ -52,7 +52,8 @@ def inspect_architecture(model):
     totals = {"llm": 0, "vit": 0, "projector": 0, "total": 0}
     for name, p in model.named_parameters():
         module = modules.get(name.rsplit(".", 1)[0])
-        if name.endswith(".weight") and module is not None and +                module.__class__.__name__ == "Linear4bit":
+        if (name.endswith(".weight") and module is not None
+                and module.__class__.__name__ == "Linear4bit"):
             n = int(module.in_features) * int(module.out_features)
         else:
             n = p.numel()

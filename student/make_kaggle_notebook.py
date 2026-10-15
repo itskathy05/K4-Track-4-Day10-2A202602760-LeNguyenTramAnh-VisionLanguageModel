@@ -40,6 +40,10 @@ with zipfile.ZipFile(bundle) as zf:
 os.chdir(ROOT)
 print("Source:", ROOT)
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-r", "requirements-colab.txt"], check=True)
+# Kaggle's base image may include an optional torchao version rejected by PEFT;
+# this NF4/bitsandbytes lab does not use torchao.
+subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "torchao"], check=False,
+               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 """),
         code("""
 import importlib.metadata, platform, torch
@@ -90,6 +94,8 @@ for row in train_rows[:6]:
 """),
         md("## 2. Test CPU, round-trip tọa độ, mask loss và 220 vision token"),
         code("""
+subprocess.run([sys.executable, "scripts/make_notebook.py"], check=True)
+assert Path("lab_day10.ipynb").is_file(), "scripts/make_notebook.py did not create lab_day10.ipynb"
 subprocess.run([sys.executable, "-m", "pytest", "-q", "tests", "student_tests",
                 "-k", "not test_report_template_has_student_markers_and_ten_questions"], check=True)
 """),
@@ -226,6 +232,10 @@ shutil.copy2("lab_day10.ipynb", "/kaggle/working/lab_day10_source.ipynb")
 print("READY: /kaggle/working/day10_final_submission.zip")
 """),
     ]
+    # Kaggle/Jupyter expects a stable id on every cell for nbformat 4.5.
+    for index, cell in enumerate(cells):
+        cell["id"] = f"day10-{index:02d}"
+
     notebook = {
         "cells": cells,
         "metadata": {
