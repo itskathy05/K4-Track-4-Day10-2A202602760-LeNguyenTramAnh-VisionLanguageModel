@@ -203,7 +203,10 @@ def train_grpo(*, base_exp: str, data_root="data", checkpoint_root="/kaggle/work
         temperature=0.7, top_p=0.8, top_k=20,
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
-        fp16=True, bf16=False, use_vllm=False, use_cache=False,
+        # T4's AMP GradScaler cannot unscale the bf16 gradients produced by
+        # Qwen3-VL's checkpointed generation path.  The trainable LoRA leaves
+        # are already float32, so run GRPO without AMP scaling.
+        fp16=False, bf16=False, use_vllm=False, use_cache=False,
         optim="adamw_torch", max_grad_norm=1.0, seed=seed, data_seed=seed,
         logging_strategy="steps", logging_steps=1,
         save_strategy="steps" if not smoke else "no",
