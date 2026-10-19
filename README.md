@@ -1,5 +1,21 @@
 # Lab Day 10: Finetune Qwen3-VL-4B (LoRA) để định vị hư hại mặt đường
 
+## Bài nộp hoàn chỉnh: E0–E4 và bonus E5
+
+- [Báo cáo 10 câu và phân tích bonus](REPORT.md), [bảng kết quả](report/results_summary.md).
+- [Evidence test](report/evidence/), [nguồn và baseline riêng của E5](report/bonus/provenance.json), [hình minh họa](report/figures/).
+- [Notebook E5 đã chạy thành công trên Kaggle](lab_day10_e5_observable.ipynb): khôi phục checkpoint SFT, smoke 1/5 bước, GRPO 60 bước, test 311 ảnh và paired bootstrap 2.000 lần.
+- E5 F1 = **0,4507**; baseline SFT của phiên E5 = **0,4372**; paired CI95 của chênh lệch = **[0,0040; 0,0254]**. Kết quả E0–E4 gốc thuộc phiên riêng, được giữ nguyên trong báo cáo.
+
+Kiểm tra bài nộp:
+
+```bash
+python -m pytest -q tests student_tests -k "not test_report_template_has_student_markers_and_ten_questions"
+python scripts/check_submission.py
+```
+
+Test mẫu nêu trên đòi báo cáo còn dấu chỗ trống của mẫu, trong khi checker bài nộp yêu cầu bỏ dấu này. Không sửa test của đề; báo cáo hoàn chỉnh giữ đủ 10 câu. Tái tạo báo cáo từ evidence bằng `python -m student.finalize_submission`.
+
 > Track 4 · Ngày 10 · *Nhãn, auto-labeling và Vision–Language Model* · **bài cá nhân** · ≈ 4 giờ trên **Google Colab T4 (miễn phí)**
 > Bạn **tự viết** phần huấn luyện và suy luận theo pseudo code trong [`GUIDE.md`](GUIDE.md). Công cụ chia dữ liệu và chấm điểm do giảng viên viết sẵn và **không được sửa**.
 

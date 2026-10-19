@@ -1,0 +1,38 @@
+{
+  "checked_at_utc": "2026-10-19T16:46:02.540822+00:00",
+  "tests": {
+    "command": "python -X utf8 -m pytest -q tests student_tests -k \"not test_report_template_has_student_markers_and_ten_questions\"",
+    "passed": 86,
+    "skipped": 2,
+    "deselected": 1,
+    "failed": 0,
+    "excluded_reason": "Original template test requires an unfinished report marker; submission checker requires its removal. Original test files are unchanged.",
+    "execution_note": "Ran outside filesystem sandbox because original checker test creates a temporary Git repository."
+  },
+  "submission_checker": {
+    "command": "python -X utf8 scripts/check_submission.py",
+    "fail": 0,
+    "warn": 1,
+    "warning": "Local data/splits/meta.json is absent; dataset is excluded from Git. Kaggle run metadata records dataset version d10-21e4070301."
+  },
+  "protected_directories": {
+    "base_commit": "c2f3997",
+    "paths": [
+      "scripts",
+      "tests",
+      "configs"
+    ],
+    "diff": "empty"
+  },
+  "report": {
+    "numbered_answers": 10,
+    "embedded_images": 9,
+    "all_image_paths_exist": true
+  },
+  "e5": {
+    "script_version_id": 359982787,
+    "steps": 60,
+    "test_images": 311,
+    "missing_predictions": 0
+  }
+}

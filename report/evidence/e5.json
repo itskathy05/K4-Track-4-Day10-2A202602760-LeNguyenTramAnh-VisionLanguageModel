@@ -1,0 +1,104 @@
+{
+  "n_images": 311,
+  "parse_valid_rate": 1.0,
+  "missing_predictions": 0,
+  "micro": {
+    "precision": 0.48148148148148145,
+    "recall": 0.4236706689536878,
+    "f1": 0.45072992700729925,
+    "tp": 247,
+    "fp": 266,
+    "fn": 336
+  },
+  "per_class": {
+    "pothole": {
+      "precision": 0.39325842696629215,
+      "recall": 0.2892561983471074,
+      "f1": 0.3333333333333333,
+      "tp": 35,
+      "fp": 54,
+      "fn": 86
+    },
+    "crack": {
+      "precision": 0.36054421768707484,
+      "recall": 0.35451505016722407,
+      "f1": 0.357504215851602,
+      "tp": 106,
+      "fp": 188,
+      "fn": 193
+    },
+    "manhole": {
+      "precision": 0.8153846153846154,
+      "recall": 0.6503067484662577,
+      "f1": 0.7235494880546075,
+      "tp": 106,
+      "fp": 24,
+      "fn": 57
+    },
+    "other": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0
+    }
+  },
+  "mean_iou": 0.6919536573627978,
+  "fp_per_image": 0.8553054662379421,
+  "f1_ci95": [
+    0.40860215053763443,
+    0.4944029850746268
+  ],
+  "score_version": 1,
+  "name": "E5",
+  "dataset_version": "d10-21e4070301",
+  "split": "test",
+  "coord": "norm1000",
+  "meta": {
+    "trainable_params": 33030144,
+    "peak_vram_gb": 3.9703259468078613,
+    "train_minutes": 20.88994081598333
+  },
+  "bonus_analysis": {
+    "baseline_exp": "e3",
+    "baseline": {
+      "parse_invalid_rate": 0.0,
+      "empty_prediction_rate": 0.0,
+      "mean_boxes_per_image": 1.6559485530546625,
+      "out_of_scale_box_rate": 0.0,
+      "oversized_box_rate": 0.0,
+      "reward_mean": 0.47708105168440884,
+      "reward_std": 0.24796598301706815
+    },
+    "e5": {
+      "parse_invalid_rate": 0.0,
+      "empty_prediction_rate": 0.0,
+      "mean_boxes_per_image": 1.6495176848874598,
+      "out_of_scale_box_rate": 0.0,
+      "oversized_box_rate": 0.0,
+      "reward_mean": 0.4834045215304376,
+      "reward_std": 0.24748897767079847
+    },
+    "paired_f1_delta": {
+      "delta_f1_b_minus_a": 0.01357145706194407,
+      "ci95": [
+        0.004008270080340548,
+        0.025392414894076065
+      ],
+      "n_images": 311,
+      "n_boot": 2000,
+      "seed": 42
+    },
+    "baseline_f1": 0.4371584699453552,
+    "baseline_f1_ci95": [
+      0.39547038327526135,
+      0.4798500468603561
+    ],
+    "e5_f1": 0.45072992700729925,
+    "e5_f1_ci95": [
+      0.40860215053763443,
+      0.4944029850746268
+    ]
+  }
+}

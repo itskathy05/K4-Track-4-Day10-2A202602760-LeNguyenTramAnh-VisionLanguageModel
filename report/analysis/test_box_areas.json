@@ -1,0 +1,21 @@
+{
+  "split": "test",
+  "n_images": 311,
+  "classes": {
+    "pothole": {
+      "n_boxes": 121,
+      "median_area_percent": 0.4192700868,
+      "boxes_under_0_5_percent": 68
+    },
+    "crack": {
+      "n_boxes": 299,
+      "median_area_percent": 1.9813205035,
+      "boxes_under_0_5_percent": 15
+    },
+    "manhole": {
+      "n_boxes": 163,
+      "median_area_percent": 0.6688347743,
+      "boxes_under_0_5_percent": 64
+    }
+  }
+}

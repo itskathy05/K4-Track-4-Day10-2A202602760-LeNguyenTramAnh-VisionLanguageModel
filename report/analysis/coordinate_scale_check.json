@@ -1,0 +1,113 @@
+{
+  "experiment": "E3 Version 7",
+  "n_images": 311,
+  "prediction_sha256": "8980a56dad5f5542fb7465c7eb89abcde408d3926bd2c120c52b6fadc037eef7",
+  "split_sha256": "09dee14aab6ed7bcdd02c4d432c51c34ae191543f1b73f01b4424f2922f8c200",
+  "norm1000": {
+    "n_images": 311,
+    "parse_valid_rate": 1.0,
+    "missing_predictions": 0,
+    "micro": {
+      "precision": 0.4547169811320755,
+      "recall": 0.41337907375643224,
+      "f1": 0.4330637915543576,
+      "tp": 241,
+      "fp": 289,
+      "fn": 342
+    },
+    "per_class": {
+      "pothole": {
+        "precision": 0.32673267326732675,
+        "recall": 0.2727272727272727,
+        "f1": 0.29729729729729726,
+        "tp": 33,
+        "fp": 68,
+        "fn": 88
+      },
+      "crack": {
+        "precision": 0.37333333333333335,
+        "recall": 0.3745819397993311,
+        "f1": 0.3739565943238731,
+        "tp": 112,
+        "fp": 188,
+        "fn": 187
+      },
+      "manhole": {
+        "precision": 0.7441860465116279,
+        "recall": 0.588957055214724,
+        "f1": 0.6575342465753424,
+        "tp": 96,
+        "fp": 33,
+        "fn": 67
+      },
+      "other": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    "mean_iou": 0.6914346787359422,
+    "fp_per_image": 0.9292604501607717,
+    "f1_ci95": [
+      0.38993710691823896,
+      0.475095785440613
+    ]
+  },
+  "same_predictions_scored_as_pixel": {
+    "n_images": 311,
+    "parse_valid_rate": 1.0,
+    "missing_predictions": 0,
+    "micro": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 530,
+      "fn": 583
+    },
+    "per_class": {
+      "pothole": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "tp": 0,
+        "fp": 101,
+        "fn": 121
+      },
+      "crack": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "tp": 0,
+        "fp": 300,
+        "fn": 299
+      },
+      "manhole": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "tp": 0,
+        "fp": 129,
+        "fn": 163
+      },
+      "other": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    "mean_iou": 0.0,
+    "fp_per_image": 1.7041800643086817,
+    "f1_ci95": [
+      0.0,
+      0.0
+    ]
+  },
+  "note": "CPU rescoring of existing predictions; no model inference was rerun"
+}

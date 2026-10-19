@@ -1,77 +1,97 @@
 # Lab Day 10 — Qwen3-VL Road Damage
 
 **Họ tên:** LÊ NGUYỄN TRÂM ANH
+**Dataset version:** `d10-21e4070301` — train/val/test: **1.422 / 276 / 311 ảnh**.
+**Thiết bị:** Kaggle Tesla T4 16 GiB; tiến trình E5 dùng GPU 0 trong máy T4 x2.
 
-**Dataset version:** `d10-21e4070301`
+## Nguồn kết quả và cách đọc báo cáo
 
-**Thiết bị:** Kaggle Tesla T4 16 GB
+E0–E4 và tám ảnh minh họa thuộc [Kaggle Version 7](https://www.kaggle.com/code/nguyentramanhle/lab-day-10-qwen3-vl-full-100-bonus-e5/output?scriptVersionId=358548947). Bốn evidence bonus được tải nguyên gốc từ [Version 14](https://www.kaggle.com/code/nguyentramanhle/lab-day-10-qwen3-vl-full-100-bonus-e5/output?scriptVersionId=359982787), trạng thái **Successfully ran in 2454.7s** (40 phút 55 giây). Bảng dưới đây dùng test split; validation phục vụ chọn setup, không thay cho kết quả test.
 
-**Run chính thức:** Kaggle Version 7, `scriptVersionId=358548947`
+Baseline E3 đi kèm snapshot đầu vào của E5 có F1 **0.4372** và được lưu riêng tại `report/bonus/e3_sft_baseline.json`. E3 Version 7 có F1 **0.4331**. Phần bonus dùng đúng baseline của snapshot E5 để tính chênh lệch và paired CI; phần E0–E4 giữ nguyên nguồn Version 7. `report/bonus/provenance.json` ghi version, nguồn và SHA-256 của các file đã tải.
 
-Môi trường notebook: Python 3.13.15, CUDA 12.8, PyTorch 2.11.0+cu128, Transformers 5.19.0, PEFT 0.21.2, TRL 1.9.2 và bitsandbytes 0.50.2. Các số dưới đây lấy trực tiếp từ `report/evidence/*.json` do `scripts/score.py` sinh trên test split 311 ảnh; không dùng validation thay cho test.
+Môi trường E5 ghi trong run metadata: Python 3.13.15, CUDA 12.8, PyTorch 2.11.0+cu128, Transformers 5.19.0, PEFT 0.21.2, TRL 1.9.2, bitsandbytes 0.50.2 và Accelerate 1.15.0.
 
 ## Bảng tổng hợp E0–E4
 
-| Mã | Thiết lập | Trainable params | VRAM GB | Phút | Parse | F1 test | CI95 | FP/ảnh | pothole | crack | manhole |
+| Run | Thiết lập | Trainable params | VRAM GiB | Phút train | Parse | F1 test | CI95 | FP/ảnh | pothole | crack | manhole |
 |---|---|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|
-| E0 | Zero-shot | 0 | — | — | 0.936 | 0.104 | 0.077–0.135 | 1.042 | 0.134 | 0.038 | 0.246 |
-| E1 | LoRA LLM | 33,030,144 | 8.803 | 52.855 | 0.997 | 0.258 | 0.222–0.300 | 1.254 | 0.194 | 0.177 | 0.522 |
-| E2 | E1 + projector | 142,135,296 | 10.296 | 53.357 | 1.000 | 0.330 | 0.291–0.371 | 1.055 | 0.205 | 0.265 | 0.564 |
-| E3 | E2 + LoRA ViT | 148,426,752 | 10.471 | 61.973 | 1.000 | **0.433** | 0.390–0.475 | **0.929** | **0.297** | **0.374** | **0.658** |
-| E4 10% | E3, 142 ảnh | 148,426,752 | 10.217 | 61.963 | 1.000 | 0.257 | 0.223–0.292 | 1.862 | 0.150 | 0.186 | 0.564 |
-| E4 100% | E3, 1.422 ảnh | 148,426,752 | 10.471 | 61.973 | 1.000 | 0.433 | 0.390–0.475 | 0.929 | 0.297 | 0.374 | 0.658 |
+| E0 | Zero-shot | 0 | — | — | 0.9357 | **0.1045** | [0.0770; 0.1348] | 1.0418 | 0.1342 | 0.0385 | 0.2458 |
+| E1 | LoRA LLM | 33,030,144 | 8.803 | 52.855 | 0.9968 | **0.2578** | [0.2217; 0.2996] | 1.2540 | 0.1939 | 0.1766 | 0.5217 |
+| E2 | E1 + projector | 142,135,296 | 10.296 | 53.357 | 1.0000 | **0.3300** | [0.2911; 0.3705] | 1.0547 | 0.2047 | 0.2651 | 0.5643 |
+| E3 | E2 + LoRA ViT | 148,426,752 | 10.471 | 61.973 | 1.0000 | **0.4331** | [0.3899; 0.4751] | 0.9293 | 0.2973 | 0.3740 | 0.6575 |
+| E4_DATA_SIZE_0.1 | E3, 142 ảnh | 148,426,752 | 10.217 | 61.963 | 1.0000 | **0.2566** | [0.2232; 0.2917] | 1.8617 | 0.1500 | 0.1855 | 0.5643 |
+| E4_DATA_SIZE_1.0 | E3, 1.422 ảnh | 148,426,752 | 10.471 | 61.973 | 1.0000 | **0.4331** | [0.3899; 0.4751] | 0.9293 | 0.2973 | 0.3740 | 0.6575 |
 
-E1 hơn E0 `0.1533` F1 và có parse-valid rate `0.9968`, vượt hai cổng bắt buộc. E3 có validation/test tốt nhất trong các setup SFT. Mọi evidence đều có `missing_predictions = 0`, `split = test` và cùng dataset version.
+E1 tăng **0.1533 F1** so với E0, vượt cổng +0,10; parse-valid rate **0.9968** vượt 0,95. Cả sáu evidence đều có `missing_predictions=0`, `split=test`, `coord=norm1000` và cùng dataset version.
 
 ## Trả lời 10 câu hỏi
 
-### Câu 1 — Kiến trúc và tham số được cập nhật
+### Câu 1 — Kiến trúc và các tham số được cập nhật
 
-Kiểm kê theo số tham số logic trước NF4: toàn model `4,437,815,808`, LLM `4,022,468,096`, ViT `306,242,560` và projector `109,105,152`. Projector là một phần của vision tower, nên vision tower đầy đủ có `415,347,712` tham số.
+Theo kích thước logic trước khi đóng gói NF4, toàn model có **4.437.815.808** tham số: LLM **4.022.468.096**, các khối ViT ngoài projector **306.242.560**, projector **109.105.152**. Projector gồm `visual.merger` và ba `visual.deepstack_merger_list`, là tập con của vision tower; vision tower đầy đủ có **415.347.712** tham số. Cộng projector thêm lần nữa vào vision tower sẽ đếm trùng.
 
-E1 mở LoRA trên 252 module LLM và có 33,030,144 tham số trainable. E2 giữ 252 module đó và mở projector float32, đạt 142,135,296. E3 thêm LoRA ViT, tổng 348 module LoRA và 148,426,752 tham số trainable. Tôi không dùng `numel()` của tensor NF4 đã đóng gói để suy ra kích thước model.
+E1 gắn LoRA rank 16, alpha 32 lên **252** module LLM, cập nhật **33.030.144** tham số. E2 mở thêm toàn projector, đạt **142.135.296**, tăng đúng **109.105.152** so với E1. E3 thêm LoRA vào 96 module ViT, đạt **348** module LoRA và **148.426.752** tham số trainable. Mã `inspect_architecture` dùng `in_features × out_features` cho Linear4bit, thay vì coi `numel()` của tensor NF4 đóng gói là số tham số logic.
 
-### Câu 2 — E0 và hai lỗi phổ biến
+### Câu 2 — E0 và hai kiểu lỗi phổ biến
 
-E0 đạt parse-valid `0.9357`, precision `0.1337`, recall `0.0858`, F1 `0.1045`. Hai lỗi chính là bỏ sót, thể hiện qua 533 false negative, và box/lớp không ghép được với GT, tạo 324 false positive. Crack yếu nhất với F1 `0.0385`.
+E0 có precision **0.1337**, recall **0.0858**, F1 **0.1045**, parse-valid **0.9357**. Có **533 FN** và **324 FP**: model bỏ sót hư hại, đồng thời tạo box hoặc lớp không ghép được với GT ở IoU ≥ 0,5. Crack đạt F1 **0.0385**, cho thấy mô tả zero-shot chưa đủ để định vị ổn định lớp này.
 
-Một raw completion được giữ trong output prediction minh họa đúng định dạng:
+Raw completion E0 đã trích từ prediction Version 7:
 
 ```json
 [{"label":"crack","bbox_2d":[355,653,538,750]},{"label":"manhole","bbox_2d":[753,661,859,717]}]
 ```
 
-Raw output E0 theo từng ảnh nằm trong `work/e0_test.jsonl` của Kaggle Output Version 7; `work/` không được commit theo quy định.
+Chuỗi trên hợp lệ về định dạng, nhưng JSON hợp lệ không bảo đảm box đúng. Grounding còn đòi hỏi đúng lớp và đủ IoU với GT. Prediction thô của lần chạy nằm trong `labrepo/work/e0_test.jsonl` ở output Version 7.
 
-### Câu 3 — Thang tọa độ 0–1000
+### Câu 3 — Sai thang tọa độ làm F1 thay đổi thế nào?
 
-Prediction dùng `[x1,y1,x2,y2]` trên thang tương đối 0–1000. Scorer đưa GT YOLO sang cùng thang trước khi ghép box. Nếu đọc các số đó như pixel 640×360, box bị co/phóng khác nhau theo hai trục; nếu đọc pixel như 0–1000, vị trí bị kéo lệch. Cả hai làm IoU giảm và nhiều cặp đúng rơi dưới ngưỡng 0,5. Pipeline kiểm chứng bằng phép đổi hai chiều YOLO → 0–1000 → pixel, kiểm tra box biên và dùng thống nhất `coord = norm1000` trong toàn bộ evidence chính thức.
+Tôi chấm lại **cùng 311 prediction E3 Version 7** bằng scorer gốc trên CPU: đúng `norm1000` cho F1 **0.433064**, cố tình đọc thành `pixel` cho F1 **0.000000**. Không chạy lại mô hình. File `report/analysis/coordinate_scale_check.json` lưu hai kết quả và hash của prediction/split đã dùng.
 
-### Câu 4 — Mask loss
+Với ảnh 640×360, pixel đúng của box 0–1000 là `x_pixel=x_norm×640/1000`, `y_pixel=y_norm×360/1000`. Đọc trực tiếp số norm1000 như pixel khiến scorer lại nhân x với 1000/640 và y với 1000/360. Hai hệ số khác nhau làm lệch cả vị trí lẫn tỷ lệ box, nên cặp đúng dễ rơi dưới IoU 0,5. Pipeline đổi YOLO → norm1000, sắp theo `(y1,x1)` và chỉ đổi về pixel lúc vẽ.
 
-Loss chỉ áp dụng cho JSON assistant và token kết thúc. Prompt, image placeholder và vision tokens mang nhãn `-100`. Gradient vì thế tập trung vào định dạng, lớp và tọa độ. Nếu tính loss trên toàn đầu vào, phần prompt cố định dễ dự đoán sẽ lấn tín hiệu grounding; loss có thể giảm nhưng box không tốt hơn.
+### Câu 4 — Mask loss và token ảnh
 
-### Câu 5 — Lượng tử hóa và projector
+`encode_example` dựng riêng chuỗi prompt và chuỗi đầy đủ prompt + assistant, kiểm tra prompt là tiền tố rồi đặt nhãn tiền tố thành **−100**. Padding cũng là −100; chỉ JSON assistant và token kết thúc tham gia cross-entropy. Token ảnh thuộc phần prompt nên được mask cùng tiền tố; kiểm tra số vision token mong đợi cho ảnh 640×360 là **220** theo cấu hình processor của lab.
 
-LLM base dùng NF4. Preflight xác nhận không có `bitsandbytes.Linear4bit` trong vision tower, `visual.merger`, ba `visual.deepstack_merger_list` hoặc `lm_head`. Projector 109,105,152 tham số được train float32 trong E2/E3; ViT và `lm_head` giữ fp16. LoRA trainable được nâng float32 để tránh gradient fp16 trước `GradScaler.unscale_`. Projector được lưu riêng vì adapter PEFT không tự chứa toàn khối này.
+Mask tại ranh giới token sau chat template giúp không lệch vị trí do image placeholder được mở rộng thành nhiều vision token. Nếu tính loss trên toàn chuỗi, prompt cố định dễ dự đoán có thể chi phối loss, làm loss giảm mà chất lượng lớp/tọa độ không cải thiện tương ứng. Collator pad các chuỗi văn bản nhưng nối `pixel_values` và `image_grid_thw` theo chiều 0.
 
-### Câu 6 — Chia tập theo session
+### Câu 5 — NF4, float32 và checkpoint projector
 
-Frame liên tiếp của một phiên gần như trùng cảnh. Chia ngẫu nhiên sẽ đưa frame gần giống nhau vào train và test, gây rò rỉ. Dataset `d10-21e4070301` chia theo session: train 1.422 ảnh (1.074 pothole, 1.750 crack, 691 manhole), val 276 (66, 470, 103), test 311 (121, 299, 163). Không có session giao nhau.
+LLM base dùng NF4; skip list có cả `visual`/`model.visual` và `lm_head`/`model.lm_head` để phù hợp tên module thực. Preflight kiểm tra vision tower và projector không chứa Linear4bit, đồng thời đối chiếu số tham số logic.
 
-### Câu 7 — So sánh E1, E2 và E3
+E2/E3 train đầy đủ projector **109,1 triệu** tham số ở float32; ViT base và lm_head giữ fp16. LoRA trainable được nâng float32 để tránh gradient fp16 ở bước `GradScaler.unscale_`. Nếu quantize cả vision tower, projector cũng có nguy cơ trở thành trọng số NF4 đóng gói, không còn là tập tham số float32 để cập nhật đầy đủ như setup E2/E3. Adapter PEFT và projector được lưu riêng; inference nạp lại cả hai.
 
-F1 tăng từ `0.2578` ở E1 lên `0.3300` ở E2 và `0.4331` ở E3. E2 hơn E1 `0.0721`; E3 hơn E1 `0.1752`. E3 đồng thời giảm FP/ảnh từ `1.254` xuống `0.929`, với chi phí thêm khoảng 1.675 GB VRAM và 9.12 phút so với E1. CI95 của E2 là `0.291–0.371`, còn E3 là `0.390–0.475`; hai khoảng không chồng nhau. Với giới hạn T4 16 GB, E3 là lựa chọn đáng tiền nhất vì đạt F1 và F1 từng lớp cao nhất, giảm FP rõ rệt và vẫn chỉ dùng 10.471 GB VRAM.
+### Câu 6 — Vì sao chia tập theo session?
 
-### Câu 8 — Độ bất định trên 311 ảnh
+Các ảnh là frame video; hai frame gần nhau trong một session có thể gần như trùng cảnh, ánh sáng và vị trí hư hại. Chia ngẫu nhiên theo ảnh có thể đưa cùng cảnh vào train và test, làm đánh giá phản ánh ghi nhớ cảnh. Split của lab gán cả session vào một tập.
 
-CI95 E0–E3 lần lượt là `0.077–0.135`, `0.222–0.300`, `0.291–0.371` và `0.390–0.475`. Khoảng tin cậy thể hiện trực tiếp độ bất định trên 311 ảnh: các chênh lệch nhỏ cần được diễn giải thận trọng, trong khi mức tăng của E3 đủ lớn để toàn bộ CI95 của E3 nằm trên E2 và E1. Vì vậy kết luận E3 tốt nhất được hỗ trợ đồng thời bởi F1 điểm, CI95, FP/ảnh và kết quả theo từng lớp.
+Dataset `d10-21e4070301` có train **1.422 ảnh** với box pothole/crack/manhole **1.074/1.750/691**, val **276 ảnh** với **66/470/103**, test **311 ảnh** với **121/299/163**. Phân bố lớp không đều giữa các session là lý do cần báo cáo F1 từng lớp và CI, bên cạnh micro-F1. Notebook E5 xác nhận lại dataset version, số ảnh và đường dẫn ảnh trước khi load model.
 
-### Câu 9 — Lỗi theo lớp và hình minh họa
+### Câu 7 — Setup nào có hiệu quả và chi phí tốt nhất?
 
-Ở E3, manhole đạt F1 `0.6575`, crack `0.3740`, pothole `0.2973`. Crack có nhiều mẫu train nhất nhưng hình dạng mảnh, kéo dài khiến IoU nhạy với sai lệch tọa độ. Pothole có recall `0.2727`, cho thấy còn nhiều bỏ sót. Manhole đều hình hơn nên precision `0.7442`, recall `0.5890`.
+E1/E2/E3 đạt F1 **0.2578/0.3300/0.4331**. E2 hơn E1 **0.0721**; E3 hơn E1 **0.1752**. Projector giúp căn chỉnh đặc trưng ảnh với token tọa độ; LoRA ViT ở E3 cho phép điều chỉnh thêm biểu diễn thị giác cho hư hại đường.
 
-Các hình dưới đây được dựng từ ảnh test gốc và `work/e3_test.jsonl` của Kaggle Output Version 7. Box GT màu xanh lá, prediction E3 màu đỏ; cả hai được đổi từ thang 0–1000 về pixel 640×360 trước khi vẽ. Tiêu đề ghi image ID, model và loại lỗi; nhãn cạnh box ghi lớp và IoU tốt nhất với box cùng lớp.
+E3 giảm FP/ảnh từ **1.2540** của E1 xuống **0.9293**. Chi phí tăng **1.667 GiB** và **9.12 phút**. Với T4 16 GiB, E3 dùng **10.471 GiB** cấp phát đỉnh, có F1 cao nhất ở cả ba lớp nên được chọn làm setup SFT tốt nhất.
+
+### Câu 8 — Đọc CI95 trên 311 ảnh
+
+Scorer bootstrap theo ảnh cho CI95 E0 **[0.0770; 0.1348]**, E1 **[0.2217; 0.2996]**, E2 **[0.2911; 0.3705]**, E3 **[0.3899; 0.4751]**. CI E3 nằm trên CI E2 và E1, hỗ trợ kết luận xếp hạng cùng với F1 điểm và FP/ảnh. Các CI riêng không thay thế trực tiếp CI của chênh lệch; không suy diễn mức tăng nhỏ chỉ từ việc hai CI chồng nhau hay không.
+
+Phần E5 có thêm **paired bootstrap 2.000 lần**, seed 42: mỗi lần lấy mẫu lại cùng các image ID cho cả baseline và E5, rồi tính chênh lệch micro-F1. CI95 chênh lệch **[0.0040; 0.0254]** không chứa 0. Các CI này mô tả bất định do lấy mẫu 311 ảnh test; chúng chưa đo biến thiên giữa nhiều seed huấn luyện.
+
+### Câu 9 — Diện tích box, lỗi từng lớp và ảnh minh họa
+
+| Lớp | Box GT | Diện tích trung vị (% ảnh) | Box < 0,5% ảnh | TP | FP | FN | F1 E3 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| pothole | 121 | 0.4193 | 68 | 33 | 68 | 88 | 0.2973 |
+| crack | 299 | 1.9813 | 15 | 112 | 188 | 187 | 0.3740 |
+| manhole | 163 | 0.6688 | 64 | 96 | 33 | 67 | 0.6575 |
+
+Thống kê diện tích dùng `width_yolo×height_yolo×100` trên GT test và được lưu trong `report/analysis/test_box_areas.json`. Pothole có **68/121** box nhỏ hơn 0,5% ảnh, phù hợp với việc cần định vị chính xác đối tượng nhỏ. Crack có box bao trung vị lớn hơn nhưng hình dạng mảnh, kéo dài, nên dịch đường biên vẫn làm IoU thay đổi mạnh. Manhole có nhiều box nhỏ mà F1 vẫn cao nhất; diện tích không giải thích một mình kết quả, hình dạng và độ phân biệt lớp cũng có vai trò. Đây là diễn giải từ thống kê, không phải thí nghiệm can thiệp riêng vào kích thước.
+
+Tám ảnh test dưới đây dùng prediction **E3 Version 7**, khớp bảng E0–E4. GT màu xanh lá, prediction màu đỏ; cả hai đổi từ norm1000 về pixel trước khi vẽ. Chú thích ghi image ID, model, lớp, IoU tốt nhất cùng lớp và loại lỗi.
 
 | False negative | False negative |
 |---|---|
@@ -89,23 +109,75 @@ Các hình dưới đây được dựng từ ảnh test gốc và `work/e3_test
 |---|---|
 | ![TP vlcsnap-00202](report/figures/example_7_TP.jpg) | ![TP vlcsnap-00204](report/figures/example_8_TP.jpg) |
 
-Ảnh và prediction dùng để chọn ví dụ được lấy đúng theo `image_id`; không có ảnh tổng hợp hay box tự đặt.
+Ảnh gốc và prediction được đối chiếu bằng image ID; không dùng ảnh sinh hoặc box tự đặt.
 
-### Câu 10 — E4: kích thước dữ liệu
+### Câu 10 — E4: chỉ thay đổi kích thước dữ liệu
 
-E4 chỉ đổi số ảnh train: 10% dùng subset cố định 142 ảnh, 100% dùng 1.422 ảnh; setup E3, seed, rank, LR, prompt, tọa độ và 300 bước giữ nguyên. F1 tăng từ `0.2566` (CI95 `0.2232–0.2917`) lên `0.4331` (CI95 `0.3899–0.4751`), chênh `0.1765`. Hai CI95 tách biệt, đồng thời FP/ảnh giảm từ `1.862` xuống `0.929`. Kết quả cho thấy quy mô dữ liệu là biến có tác động lớn và nhất quán đến khả năng tổng quát hóa.
+Nhánh 10% dùng subset cố định **142 ảnh**; nhánh 100% dùng **1.422 ảnh**, tái sử dụng kết quả setup E3. Seed 42, rank, LR, prompt, thang tọa độ, số bước 300 và setup E3 giữ nguyên.
 
-## Nhật ký tài nguyên
+F1 lần lượt **0.2566** với CI95 **[0.2232; 0.2917]** và **0.4331** với CI95 **[0.3899; 0.4751]**. Mức tăng là **0.1765**, đồng thời FP/ảnh giảm từ **1.8617** xuống **0.9293**. Hai CI riêng tách biệt cho thấy lợi ích rõ trong lần chạy này. Việc giữ nguyên số bước nghĩa là nhánh 10% lặp lại mỗi ảnh nhiều hơn; thêm dữ liệu vẫn cải thiện khả năng tổng quát hóa trên test.
 
-| Run | Trainable params | Peak VRAM GB | Train minutes |
+## Bonus E5 — GRPO với reward IoU
+
+### Reward và các cổng kiểm tra
+
+`student/e5.py` dùng parser của scorer gốc. JSON hỏng nhận 0; cả GT và prediction rỗng nhận 1. Với JSON hợp lệ, ghép tham lam cùng lớp theo IoU giảm dần, chỉ nhận IoU ≥ 0,5:
+
+`reward = 0.2 + 0.8 × sum(matched_IoU) / max(n_gt, n_pred, 1)`.
+
+Box thừa làm tăng mẫu số; sai lớp hoặc box khổng lồ không đủ IoU không tạo thêm matched IoU. **8/8 reward tests** bao phủ perfect, JSON hỏng, sai lớp, thừa box, cả hai rỗng, prediction rỗng khi có GT, box khổng lồ và completion dạng hội thoại TRL. Hai smoke run **1 bước/4 ảnh** và **5 bước/20 ảnh** hoàn tất trước full run; smoke dùng completion length 32 để kiểm tra tích hợp, còn full run dùng 128.
+
+### Huấn luyện và kết quả test
+
+E5 nạp **E3 step 300** cùng projector, chỉ mở LoRA LLM: **33,030,144** tham số. Dữ liệu GRPO gồm prompt hội thoại có image placeholder, cột image được decode thành PIL và ground_truth JSON. Full run dùng **1.422 ảnh train, 60 optimizer steps, seed 42, LR 5e−6, beta=0, num_generations=4, generation_batch_size=4, batch=1, gradient accumulation=4**, gradient checkpointing; `use_vllm=False`. Sampling lúc train: temperature 0,7, top_p 0,8, top_k 20; đánh giá cuối dùng greedy.
+
+LoRA trainable giữ float32 và tắt fp16/bf16 AMP trong GRPO để tránh đường GradScaler không tương thích trên T4; LLM base giữ NF4. Mã ghi tiến độ từng bước, checkpoint mỗi 10 bước và log ra file; completion samples được lưu độc lập với bảng Rich. Run kết thúc đủ **60/60 bước**, có **60 bản ghi reward** và loss hữu hạn ở **60 bước**.
+
+| Đánh giá trên cùng 311 ảnh test | SFT baseline của E5 | E5 sau GRPO |
+|---|---:|---:|
+| F1 | 0.4372 | **0.4507** |
+| CI95 F1 | [0.3955; 0.4799] | [0.4086; 0.4944] |
+| Precision | 0.4660 | 0.4815 |
+| Recall | 0.4117 | 0.4237 |
+| FP/ảnh | 0.8842 | 0.8553 |
+| TP / FP / FN | 240 / 275 / 343 | 247 / 266 / 336 |
+
+**Delta F1 = +0.013571** (+1.36 điểm phần trăm), paired CI95 **[0.004008; 0.025392]** từ 2.000 bootstrap trên cùng 311 image ID. Khoảng này nằm hoàn toàn trên 0, hỗ trợ mức cải thiện của E5 đối với baseline của lần chạy; dù hai CI F1 riêng còn chồng nhau, paired CI khai thác đúng cặp ảnh. E5 có `parse_valid_rate=1`, `missing_predictions=0`, split test và dataset version chuẩn.
+
+### Reward hacking và diễn biến reward
+
+| Chỉ số test greedy | SFT baseline | E5 |
+|---|---:|---:|
+| JSON hỏng | 0% | 0% |
+| Output `[]` | 0% | 0% |
+| Box trung bình/ảnh | 1.6559 | 1.6495 |
+| Box ngoài thang 0–1000 | 0% | 0% |
+| Box quá lớn theo quy tắc phân tích | 0% | 0% |
+| IoU reward trung bình trên test | 0.4771 | 0.4834 |
+| Độ lệch chuẩn reward test | 0.2480 | 0.2475 |
+
+Quy tắc box quá lớn: rộng hoặc cao >900 đơn vị, hoặc diện tích >500.000 trên thang norm1000. Không quan sát thấy kiểu lấy reward bằng `[]`, box khổng lồ hay box vượt thang trên test. Số box/ảnh gần như giữ nguyên, trong khi TP tăng từ 240 lên 247; kết quả phù hợp với cải thiện định vị trong lần so sánh này.
+
+Trong **200 completion stochastic đầu tiên** được lưu, có **5 JSON hỏng (2.5%)**, không có output rỗng. Đây là mẫu trong quá trình khám phá lúc train; test greedy cuối có 0 JSON hỏng. Reward trung bình 10 bước đầu **0.4611**, 10 bước cuối **0.4832**, reward ở bước cuối **0.8586**. Reward dao động theo batch, nên không dùng riêng giá trị bước cuối làm thước đo tổng quát hóa.
+
+Có **10/60 bước (16.67%)** ghi reward std bằng 0; mean `frac_reward_zero_std` là **0.1667**. Nhóm không có chênh lệch reward không cung cấp tín hiệu advantage phân biệt completion. Phần lớn bước còn lại có reward variance dương. Các giá trị này cùng F1 và paired CI giúp kiểm tra reward có đi kèm tiến bộ trên test.
+
+![Reward và loss thực tế trong 60 bước GRPO](report/figures/e5_training.png)
+
+GRPO loss có thể âm vì tối ưu surrogate policy objective; không diễn giải nó như cross-entropy SFT. Hình trên được tạo trực tiếp từ `e5_train_log.json`.
+
+## Nhật ký tài nguyên và file bài nộp
+
+| Run | Trainable params | Peak allocated VRAM GiB | Phút train |
 |---|---:|---:|---:|
 | E1 | 33,030,144 | 8.803396 | 52.854550 |
 | E2 | 142,135,296 | 10.295559 | 53.356561 |
 | E3 | 148,426,752 | 10.470715 | 61.972960 |
-| E4 10% | 148,426,752 | 10.217309 | 61.962673 |
+| E4_DATA_SIZE_0.1 | 148,426,752 | 10.217309 | 61.962673 |
+| E5 | 33,030,144 | 3.970326 | 20.889941 |
 
-Các giá trị khớp trực tiếp trường `meta` trong evidence.
+VRAM là peak allocated đo bằng `torch.cuda.max_memory_allocated`, không phải tổng bộ nhớ nvidia-smi hay tổng hai GPU. Full E5 train mất **20.89 phút**; toàn notebook **40 phút 55 giây** gồm khôi phục nguồn, dependencies, hai smoke run, full train, inference và phân tích.
 
-## Tính tái lập
+Các file bonus: `report/evidence/e5_train_log.json`, `e5_completion_samples.jsonl`, `e5.json`, `e5_analysis.json`. Baseline đúng của paired comparison và nguồn tải nằm trong `report/bonus/`. Notebook chạy thành công là `lab_day10_e5_observable.ipynb`; generator `student/build_e5_watchdog_notebook.py` nhúng mã nguồn hiện tại để không phụ thuộc phiên bản mã cũ trong Kaggle Input. `student/finalize_submission.py` nhập archive và dựng báo cáo/đồ thị từ evidence.
 
-Sáu evidence chính thức trong `report/evidence/` được trích nguyên giá trị từ Kaggle Output Version 7. E0–E4 đều dùng test split 311 ảnh, `missing_predictions = 0` và dataset version `d10-21e4070301`. Repository chỉ lưu mã nguồn, evidence nhỏ, hình minh họa và báo cáo; dataset, prediction trung gian, checkpoint, token và trọng số không được commit.
+Repository lưu mã, notebook, evidence nhỏ, hình minh họa và báo cáo. Dataset, prediction toàn bộ, checkpoint, trọng số và token nằm ngoài các file được commit. Các thư mục đề `scripts/`, `tests/`, `configs/` được giữ nguyên.

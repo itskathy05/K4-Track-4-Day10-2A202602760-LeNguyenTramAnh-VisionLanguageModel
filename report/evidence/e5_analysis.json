@@ -1,0 +1,41 @@
+{
+  "baseline_exp": "e3",
+  "baseline": {
+    "parse_invalid_rate": 0.0,
+    "empty_prediction_rate": 0.0,
+    "mean_boxes_per_image": 1.6559485530546625,
+    "out_of_scale_box_rate": 0.0,
+    "oversized_box_rate": 0.0,
+    "reward_mean": 0.47708105168440884,
+    "reward_std": 0.24796598301706815
+  },
+  "e5": {
+    "parse_invalid_rate": 0.0,
+    "empty_prediction_rate": 0.0,
+    "mean_boxes_per_image": 1.6495176848874598,
+    "out_of_scale_box_rate": 0.0,
+    "oversized_box_rate": 0.0,
+    "reward_mean": 0.4834045215304376,
+    "reward_std": 0.24748897767079847
+  },
+  "paired_f1_delta": {
+    "delta_f1_b_minus_a": 0.01357145706194407,
+    "ci95": [
+      0.004008270080340548,
+      0.025392414894076065
+    ],
+    "n_images": 311,
+    "n_boot": 2000,
+    "seed": 42
+  },
+  "baseline_f1": 0.4371584699453552,
+  "baseline_f1_ci95": [
+    0.39547038327526135,
+    0.4798500468603561
+  ],
+  "e5_f1": 0.45072992700729925,
+  "e5_f1_ci95": [
+    0.40860215053763443,
+    0.4944029850746268
+  ]
+}

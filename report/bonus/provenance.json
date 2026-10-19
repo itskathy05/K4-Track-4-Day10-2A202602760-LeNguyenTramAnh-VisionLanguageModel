@@ -1,0 +1,45 @@
+{
+  "primary_sft": {
+    "script_version_id": 358548947,
+    "version": 7,
+    "url": "https://www.kaggle.com/code/nguyentramanhle/lab-day-10-qwen3-vl-full-100-bonus-e5/output?scriptVersionId=358548947",
+    "evidence": "report/evidence/e0.json through e4_data_size_1.0.json"
+  },
+  "grpo": {
+    "script_version_id": 359982787,
+    "version": 14,
+    "url": "https://www.kaggle.com/code/nguyentramanhle/lab-day-10-qwen3-vl-full-100-bonus-e5/output?scriptVersionId=359982787",
+    "notebook_status": "Successfully ran in 2454.7s",
+    "wall_seconds": 2454.7,
+    "reward_tests_passed": 8,
+    "smoke_steps": [
+      1,
+      5
+    ]
+  },
+  "baseline_for_grpo": {
+    "file": "report/bonus/e3_sft_baseline.json",
+    "source": "e3.json in e5_bonus_evidence.zip, copied from the attached SFT input snapshot",
+    "f1": 0.4371584699453552,
+    "primary_version7_f1": 0.4330637915543576
+  },
+  "archive_sha256": "aea42daf81cd457151d6925ba5cc73ae588a5da4117e123131624527ce62ef56",
+  "archive_members_sha256": {
+    "e2.json": "97ffc9a0cb5bfa218d7d1973b06ad677e67904c5c65f7d13ca80c74aacf630dd",
+    "e5_completion_samples.jsonl": "cdbf8f205688d56f3a2dca7984a5d16519cced23d08f814a81f854b2c25dd0c7",
+    "e4_data_size_0.1.json": "bfe5a824d20f5465aa87299a75b5db819d305b1df63fd78561683925f54f3d38",
+    "e1.json": "214c5dfa42cbe2a403c44326a4c8b4e2a3650c6ce606da4edf242beaa98ebd4e",
+    "e5_train_log.json": "d0df8b2cddac7f2747826aa89fd21bab63bb06b6a5aef47b058411db6a5eacef",
+    "e3.json": "cd465cb49cd341590080a2b6589a6e296846ccf2facd8b47037035b6f94ae5ca",
+    "e4_data_size_1.0.json": "599364ed52b5fcc44a5bc16196d0ffdcf7242a61d11d48172b7ba109c4ee0e3f",
+    "e0.json": "2d682ec395ea87154d63f17da219d07bc76d4fd4eb5846ef04c7188d74585428",
+    "e5.json": "60c22ffbd8aa1ef347202804ecb9fcf866f9fa34f49a7a3707dee5e314b7b618",
+    "e5_analysis.json": "485ced6fa7a896423f35b812d67be7b6fafe665cb9b5db55428e4376ea052ecb"
+  },
+  "published_files_sha256": {
+    "e5.json": "60c22ffbd8aa1ef347202804ecb9fcf866f9fa34f49a7a3707dee5e314b7b618",
+    "e5_analysis.json": "485ced6fa7a896423f35b812d67be7b6fafe665cb9b5db55428e4376ea052ecb",
+    "e5_train_log.json": "d0df8b2cddac7f2747826aa89fd21bab63bb06b6a5aef47b058411db6a5eacef",
+    "e5_completion_samples.jsonl": "cdbf8f205688d56f3a2dca7984a5d16519cced23d08f814a81f854b2c25dd0c7"
+  }
+}
