@@ -24,7 +24,7 @@ def _load_run(exp, checkpoint):
 
 
 def generate_split(exp: str, *, split="test", data_root="data", checkpoint_root="/content/drive/MyDrive/day10",
-                   batch_size=4, output=None, max_new_tokens=256):
+                   batch_size=4, output=None, max_new_tokens=256, resume=False):
     if split not in {"val", "test"}:
         raise ValueError("inference split must be val or test")
     if exp == "e0":
@@ -36,10 +36,16 @@ def generate_split(exp: str, *, split="test", data_root="data", checkpoint_root=
     processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-4B-Instruct")
     processor.tokenizer.padding_side = "left"
     rows = load_jsonl(Path(data_root) / "splits" / f"{split}.jsonl")
+    output = Path(output or (Path("work") / f"{exp}_{split}.jsonl"))
+    output.parent.mkdir(parents=True, exist_ok=True)
     model.eval()
     device = torch.device("cuda:0")
-    outputs = []
-    i = 0
+    outputs = load_jsonl(output) if resume and output.exists() else []
+    if [x["image_id"] for x in outputs] != [x["image_id"] for x in rows[:len(outputs)]]:
+        raise RuntimeError("partial predictions are not an ordered prefix of this split")
+    if not resume:
+        output.write_text("", encoding="utf-8")
+    i = len(outputs)
     current_bs = batch_size
     while i < len(rows):
         group = rows[i:i + current_bs]
@@ -62,9 +68,15 @@ def generate_split(exp: str, *, split="test", data_root="data", checkpoint_root=
             decoded = [processor.decode(g[prompt_len:], skip_special_tokens=True,
                                         clean_up_tokenization_spaces=False)
                        for g in generated]
-            outputs.extend({"image_id": row["image_id"], "raw": raw}
-                           for row, raw in zip(group, decoded))
+            batch_outputs = [{"image_id": row["image_id"], "raw": raw}
+                             for row, raw in zip(group, decoded)]
+            outputs.extend(batch_outputs)
+            with output.open("a", encoding="utf-8") as f:
+                for item in batch_outputs:
+                    f.write(json.dumps(item, ensure_ascii=False) + "\n")
+                f.flush()
             i += len(group)
+            print(f"INFERENCE_PROGRESS {exp} {split} {i}/{len(rows)}", flush=True)
         except torch.cuda.OutOfMemoryError:
             torch.cuda.empty_cache()
             if current_bs == 1:
@@ -73,11 +85,6 @@ def generate_split(exp: str, *, split="test", data_root="data", checkpoint_root=
             print(f"OOM; retry inference at batch_size={current_bs}")
     if len(outputs) != len(rows) or len({x["image_id"] for x in outputs}) != len(rows):
         raise RuntimeError("inference did not produce exactly one result per split image")
-    output = Path(output or (Path("work") / f"{exp}_{split}.jsonl"))
-    output.parent.mkdir(parents=True, exist_ok=True)
-    with output.open("w", encoding="utf-8") as f:
-        for item in outputs:
-            f.write(json.dumps(item, ensure_ascii=False) + "\n")
     return output
 
 

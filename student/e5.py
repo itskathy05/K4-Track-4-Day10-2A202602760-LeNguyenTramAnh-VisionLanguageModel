@@ -174,6 +174,7 @@ def train_grpo(*, base_exp: str, data_root="data", checkpoint_root="/kaggle/work
     _COMPLETION_SAMPLES = []
     import torch
     from trl import GRPOConfig, GRPOTrainer
+    from transformers import TrainerCallback
 
     if max_steps not in {1, 5, 60}:
         raise ValueError("E5 plan supports smoke steps 1/5 and the full 60-step run")
@@ -215,10 +216,41 @@ def train_grpo(*, base_exp: str, data_root="data", checkpoint_root="/kaggle/work
         save_strategy="steps" if not smoke else "no",
         save_steps=max(1, min(10, max_steps)), save_total_limit=5,
         report_to=[], remove_unused_columns=False,
-        log_completions=True, num_completions_to_print=4,
+        # Completion samples are saved by grpo_iou_reward. Rich's large tables
+        # are unnecessary in the non-interactive Kaggle commit log.
+        log_completions=False, num_completions_to_print=0, disable_tqdm=True,
+        dataloader_num_workers=0,
     )
+    class ProgressCallback(TrainerCallback):
+        def _record(self, state, event, logs=None):
+            row = {"event": event, "step": int(state.global_step),
+                   "max_steps": int(state.max_steps), "time": time.time()}
+            if logs:
+                row["metrics"] = logs
+            progress = output_root / "progress.json"
+            temp = progress.with_suffix(".tmp")
+            temp.write_text(json.dumps(row, default=str), encoding="utf-8")
+            temp.replace(progress)
+            with (output_root / "progress.jsonl").open("a", encoding="utf-8") as f:
+                f.write(json.dumps(row, default=str) + "\n")
+                f.flush()
+            print("E5_PROGRESS " + json.dumps(row, default=str), flush=True)
+
+        def on_train_begin(self, args, state, control, **kwargs):
+            self._record(state, "train_begin")
+
+        def on_step_end(self, args, state, control, **kwargs):
+            self._record(state, "step_end")
+
+        def on_log(self, args, state, control, logs=None, **kwargs):
+            self._record(state, "metrics", logs)
+
+        def on_train_end(self, args, state, control, **kwargs):
+            self._record(state, "train_end")
+
     trainer = GRPOTrainer(model=model, reward_funcs=grpo_iou_reward,
-                          args=args, train_dataset=dataset, processing_class=processor)
+                          args=args, train_dataset=dataset, processing_class=processor,
+                          callbacks=[ProgressCallback()])
     latest = None
     if resume and not smoke and trainer_dir.exists():
         candidates = sorted(p for p in trainer_dir.glob("checkpoint-*") if p.is_dir())
@@ -239,7 +271,7 @@ def train_grpo(*, base_exp: str, data_root="data", checkpoint_root="/kaggle/work
            "base_checkpoint": str(checkpoint), "steps": int(trainer.state.global_step),
            "max_steps": max_steps, "seed": seed, "train_images": len(dataset),
            "learning_rate": 5e-6, "beta": 0.0, "num_generations": 4,
-           "max_completion_length": 128, "generation_batch_size": 4,
+           "max_completion_length": int(args.max_completion_length), "generation_batch_size": 4,
            "temperature": 0.7, "top_p": 0.8, "top_k": 20,
            "per_device_train_batch_size": 1, "gradient_accumulation_steps": 4,
            "trainable_params": sum(p.numel() for p in trainer.model.parameters() if p.requires_grad),
@@ -376,7 +408,7 @@ def main(argv=None):
         from student.inference import generate_split, score_predictions
         pred = Path("work") / f"e5_{args.split}.jsonl"
         generate_split("e5", split=args.split, data_root=args.data_root,
-                       checkpoint_root=args.checkpoint_root, output=pred)
+                       checkpoint_root=args.checkpoint_root, output=pred, resume=True)
         run_path = Path("work/e5_run.json") if args.split == "test" else None
         out = Path("report/evidence/e5.json") if args.split == "test" else None
         score_predictions("e5", pred, split=args.split, data_root=args.data_root,
